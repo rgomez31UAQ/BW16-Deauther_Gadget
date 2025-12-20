@@ -404,6 +404,22 @@ void nx::menu::generateRandomBSSID(uint8_t* bssid) {
   bssid[0] &= 0xFE;
 }
 
+std::string nx::menu::modifySSIDWithSpaces(const std::string& ssid, int cloneCount) {
+  int spaceCount = (cloneCount % 25) + 1;
+  std::string modifiedSSID = ssid.empty() ? "Hidden_AP" : ssid;
+  for(int i = 0; i < spaceCount; i++) modifiedSSID += " ";
+  if(modifiedSSID.length() > 32) modifiedSSID = modifiedSSID.substr(0, 32);
+  return modifiedSSID;
+}
+
+void nx::menu::sendBeaconForAP(const BSSIDInfo* ap, int& cloneCount) {
+  std::string modifiedSSID = modifySSIDWithSpaces(ap->ssid, cloneCount);
+  uint8_t fakeBSSID[6];
+  generateRandomBSSID(fakeBSSID);
+  tx.txBeaconFrame(modifiedSSID.c_str(), getRandomChannel(), fakeBSSID, ap->encrypted);
+  cloneCount++;
+}
+
 void nx::menu::executeChannelAttack(const char* attackType, std::function<void(uint8_t)> attackFunc) {
   if(channelAPMap.empty()) {
     renderPopup("Scan First");
@@ -440,6 +456,43 @@ void nx::menu::executeChannelAttack(const char* attackType, std::function<void(u
           if(btn.btnPress(btnBack)) break;
         }
         drawMenu(channelList, selectedIdx);
+      }
+    }
+    if(btn.btnPress(btnBack)) break;
+  }
+}
+
+void nx::menu::executeSelectedAttack(const char* attackType, std::function<void(const BSSIDInfo&, uint8_t)> attackFunc) {
+  if(channelAPMap.empty()) {
+    renderPopup("Scan First");
+    return;
+  }
+  if(selectedAPs.empty()) {
+    renderPopup("No APs Selected");
+    return;
+  }
+  
+  int selectedCount = 0;
+  for(bool sel : selectedAPs) if(sel) selectedCount++;
+  
+  if(selectedCount == 0) {
+    renderPopup("No APs Selected");
+    return;
+  }
+  
+  char title[32];
+  snprintf(title, sizeof(title), "%s %d APs", attackType, selectedCount);
+  
+  while(true) {
+    drawSubMenu(std::string(title));
+    size_t idx = 0;
+    for(auto& entry : channelAPMap) {
+      uint8_t channel = entry.first;
+      for(auto& apInfo : entry.second) {
+        if(idx < selectedAPs.size() && selectedAPs[idx]) {
+          attackFunc(apInfo, channel);
+        }
+        idx++;
       }
     }
     if(btn.btnPress(btnBack)) break;
@@ -505,9 +558,7 @@ void nx::menu::getSSIDAndChannelLists(std::vector<std::string> &ssids, std::vect
 }
 
 void nx::menu::deauthByChannel() {
-  executeChannelAttack("Attack", [this](uint8_t ch) {
-    tx.txDeauthFrameChannel(ch);
-  });
+  executeChannelAttack("Attack", [this](uint8_t ch) {tx.txDeauthFrameChannel(ch);});
 }
 
 void nx::menu::drawSelectMenu() {
@@ -548,33 +599,7 @@ void nx::menu::drawSelectMenu() {
 }
 
 void nx::menu::deauthSelected() {
-  if(channelAPMap.empty()) {
-    renderPopup("Scan First");
-    return;
-  }
-  if(selectedAPs.empty()) {
-    renderPopup("No APs Selected");
-    return;
-  }
-  
-  int selectedCount = 0;
-  for(bool sel : selectedAPs) if(sel) selectedCount++;
-  
-  char title[32];
-  snprintf(title, sizeof(title), "Attack %d APs", selectedCount);
-  
-  while(true) {
-    drawSubMenu(std::string(title));
-    size_t idx = 0;
-    for(auto& entry : channelAPMap) {
-      uint8_t channel = entry.first;
-      for(auto& apInfo : entry.second) {
-        if(idx < selectedAPs.size() && selectedAPs[idx]) tx.txDeauthFrameBSSID(apInfo.bssid.data(), channel);
-        idx++;
-      }
-    }
-    if(btn.btnPress(btnBack)) break;
-  }
+  executeSelectedAttack("Attack", [this](const BSSIDInfo& apInfo, uint8_t channel){tx.txDeauthFrameBSSID(apInfo.bssid.data(), channel);});
 }
 
 void nx::menu::authAttack(){
@@ -598,38 +623,7 @@ void nx::menu::authByChannel() {
 }
 
 void nx::menu::authSelected() {
-  if(channelAPMap.empty()) {
-    renderPopup("Scan First");
-    return;
-  }
-  if(selectedAPs.empty()) {
-    renderPopup("No APs Selected");
-    return;
-  }
-  
-  int selectedCount = 0;
-  for(bool sel : selectedAPs) if(sel) selectedCount++;
-  
-  if(selectedCount == 0) {
-    renderPopup("No APs Selected");
-    return;
-  }
-  
-  char title[32];
-  snprintf(title, sizeof(title), "Auth %d APs", selectedCount);
-  
-  while(true) {
-    drawSubMenu(std::string(title));
-    size_t idx = 0;
-    for(auto& entry : channelAPMap) {
-      uint8_t channel = entry.first;
-      for(auto& apInfo : entry.second) {
-        if(idx < selectedAPs.size() && selectedAPs[idx]) tx.txAuthFrame(apInfo.bssid.data(), channel);
-        idx++;
-      }
-    }
-    if(btn.btnPress(btnBack)) break;
-  }
+  executeSelectedAttack("Auth", [this](const BSSIDInfo& apInfo, uint8_t channel) {tx.txAuthFrame(apInfo.bssid.data(), channel);});
 }
 
 void nx::menu::assocAttack(){
@@ -656,41 +650,10 @@ void nx::menu::assocByChannel() {
 }
 
 void nx::menu::assocSelected() {
-  if(channelAPMap.empty()) {
-    renderPopup("Scan First");
-    return;
-  }
-  if(selectedAPs.empty()) {
-    renderPopup("No APs Selected");
-    return;
-  }
-  
-  int selectedCount = 0;
-  for(bool sel : selectedAPs) if(sel) selectedCount++;
-  
-  if(selectedCount == 0) {
-    renderPopup("No APs Selected");
-    return;
-  }
-  
-  char title[32];
-  snprintf(title, sizeof(title), "Assoc %d APs", selectedCount);
-  
-  while(true) {
-    drawSubMenu(std::string(title));
-    size_t idx = 0;
-    for(auto& entry : channelAPMap) {
-      uint8_t channel = entry.first;
-      for(auto& apInfo : entry.second) {
-        if(idx < selectedAPs.size() && selectedAPs[idx]) {
-          const char* ssid = apInfo.ssid.empty() ? "Network" : apInfo.ssid.c_str();
-          tx.txAssocFrame(apInfo.bssid.data(), ssid, channel);
-        }
-        idx++;
-      }
-    }
-    if(btn.btnPress(btnBack)) break;
-  }
+  executeSelectedAttack("Assoc", [this](const BSSIDInfo& apInfo, uint8_t channel) {
+    const char* ssid = apInfo.ssid.empty() ? "Network" : apInfo.ssid.c_str();
+    tx.txAssocFrame(apInfo.bssid.data(), ssid, channel);
+  });
 }
 void nx::menu::beaconAllSSID() {
   if(channelAPMap.empty()) {
@@ -719,18 +682,7 @@ void nx::menu::beaconAllSSID() {
     drawSubMenu(std::string(title));
     
     for(const auto* ap : allAPs) {
-      int spaceCount = (cloneCount % 25) + 1;
-      
-      std::string modifiedSSID = ap->ssid.empty() ? "Hidden_AP" : ap->ssid;
-      for(int i = 0; i < spaceCount; i++) modifiedSSID += " ";
-      if(modifiedSSID.length() > 32) modifiedSSID = modifiedSSID.substr(0, 32);
-      
-      uint8_t fakeBSSID[6];
-      generateRandomBSSID(fakeBSSID);
-      
-      tx.txBeaconFrame(modifiedSSID.c_str(), getRandomChannel(), fakeBSSID, ap->encrypted);
-      
-      cloneCount++;
+      sendBeaconForAP(ap, cloneCount);
     }
     
     if(btn.btnPress(btnBack)) break;
@@ -767,19 +719,7 @@ void nx::menu::beaconSSIDDupe() {
     drawSubMenu(std::string(title));
     
     for(const auto* ap : selectedAPList) {
-      int spaceCount = (cloneCount % 25) + 1;
-      
-      std::string modifiedSSID = ap->ssid.empty() ? "Hidden_AP" : ap->ssid;
-      for(int i = 0; i < spaceCount; i++) modifiedSSID += " ";
-
-      if(modifiedSSID.length() > 32) modifiedSSID = modifiedSSID.substr(0, 32);
-
-      uint8_t fakeBSSID[6];
-      generateRandomBSSID(fakeBSSID);
-      
-      tx.txBeaconFrame(modifiedSSID.c_str(), getRandomChannel(), fakeBSSID, ap->encrypted);
-      
-      cloneCount++;
+      sendBeaconForAP(ap, cloneCount);
     }
     
     if(btn.btnPress(btnBack)) break;
@@ -822,14 +762,7 @@ void nx::menu::beaconDupeByChannel() {
           drawSubMenu(std::string(title));
           if(channelAPMap.find(targetChannel) != channelAPMap.end()) {
             for(auto& apInfo : channelAPMap[targetChannel]) {
-              int spaceCount = (cloneCount % 25) + 1;
-              std::string modifiedSSID = apInfo.ssid.empty() ? "Hidden_AP" : apInfo.ssid;
-              for(int i = 0; i < spaceCount; i++) modifiedSSID += " ";
-              if(modifiedSSID.length() > 32) modifiedSSID = modifiedSSID.substr(0, 32);
-              uint8_t fakeBSSID[6];
-              generateRandomBSSID(fakeBSSID);
-              tx.txBeaconFrame(modifiedSSID.c_str(), getRandomChannel(), fakeBSSID, apInfo.encrypted);
-              cloneCount++;
+              sendBeaconForAP(&apInfo, cloneCount);
             }
           }
           if(btn.btnPress(btnBack)) break;
@@ -909,7 +842,7 @@ void nx::menu::menuHandler(std::vector<menuItem> &menu, int index) {
       indexChanged = true;
     }
     if (btn.btnPress(btnOk)) {
-      if (! item.subMenu.empty()) {
+      if (!item.subMenu.empty()) {
         int subIndex = 0;
         menuHandler(item.subMenu, subIndex);
         drawMenu(menuNames, index);

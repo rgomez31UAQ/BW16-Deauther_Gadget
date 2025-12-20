@@ -30,6 +30,9 @@ namespace nx {
   private:
     uint8_t currentChannel = 0;
     
+    // Processes scan results by filtering duplicates and updating channel AP map
+    void processScanResults(int scanCount, uint8_t channel, int& totalScan, bool verbose = false);
+    
   public:
     static const uint8_t channelList[37];
     static const size_t channelCount;

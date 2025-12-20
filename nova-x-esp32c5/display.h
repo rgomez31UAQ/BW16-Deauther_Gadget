@@ -21,7 +21,7 @@ namespace nx {
   private:
     static constexpr uint8_t channels5G[] = {36, 40, 44, 48, 149, 153, 157, 161, 165};
         
-    const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+    static constexpr const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
     std::vector<std::string> prevMenuName;
     int prevSelected = -1;
     int menuSize = 0;
@@ -91,6 +91,9 @@ namespace nx {
     uint8_t getRandomChannel();
     void generateRandomBSSID(uint8_t* bssid);
     void executeChannelAttack(const char* attackType, std::function<void(uint8_t)> attackFunc);
+    std::string modifySSIDWithSpaces(const std::string& ssid, int cloneCount);
+    void sendBeaconForAP(const BSSIDInfo* ap, int& cloneCount);
+    void executeSelectedAttack(const char* attackType, std::function<void(const BSSIDInfo&, uint8_t)> attackFunc);
     
   public:
     int index = 0;
