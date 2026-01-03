@@ -10,7 +10,7 @@
 ![ESP32](https://img.shields.io/badge/ESP32-2C2D72?logo=espressif&logoColor=white)
 ![Arduino](https://img.shields.io/badge/Arduino-00979D?logo=arduino&logoColor=white)
 ![License:  BSD 2-Clause](https://img.shields.io/badge/License-BSD%202--Clause-orange)
-![Version](https://img.shields.io/badge/version-0.1.0--beta-blue)
+![Version](https://img.shields.io/badge/version-0.1.1--beta-blue)
 ![GitHub stars](https://img.shields.io/github/stars/warwick320/Nova-X-5G-Deauther?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/warwick320/Nova-X-5G-Deauther?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/warwick320/Nova-X-5G-Deauther)
@@ -18,21 +18,26 @@
 
 WiFi security testing and BLE advertisement tool specifically designed for ESP32C5 platform with U8g2 OLED display support.
 
+> The current version is in beta. More features will be added.
+
 ## Table of Contents
 
-- [Overview](#overview)
+- [Contact & Troubleshooting](#contact--troubleshooting)
 - [Features](#features)
 - [Hardware Requirements](#hardware-requirements)
 - [Pin Configuration](#pin-configuration)
 - [Software Requirements](#software-requirements)
 - [Installation](#installation)
-- [Project Structure](#project-structure)
 - [Usage](#usage)
 - [Menu System](#menu-system)
 - [Technical Details](#technical-details)
 - [Legal Disclaimer](#legal-disclaimer)
 - [License](#license)
-- [Contact](#contact)
+
+## Contact & Troubleshooting
+
+- **Issues && Troubleshooting**: [Discord Server Link](https://discord.gg/gvzkwguAkh)
+
 
 ## Features
 
@@ -425,11 +430,6 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 See the [LICENSE](../LICENSE) file for full details.
 
-## Contact
-
-- **Repository**: [github.com/warwick320/Nova-X-5G-Deauther](https://github.com/warwick320/Nova-X-5G-Deauther)
-- **Issues**: [GitHub Issues](https://github.com/warwick320/Nova-X-5G-Deauther/issues)
-- **Discord**: zw.warwick
 
 ---
 
