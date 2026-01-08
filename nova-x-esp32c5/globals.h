@@ -31,6 +31,11 @@ const uint8_t BTN_BACK = 10;
 
 const int btnCount = 4;
 
+const char* version = "v0.2.2-beta";
+const char* device = "ESP32-C5";
+const char* author = "warwick320";
+
+
 extern U8G2_SSD1306_128X64_NONAME_F_HW_I2C display;
 extern std::map<uint8_t, std::vector<BSSIDInfo>> channelAPMap;
 extern uint8_t totalAPCount;

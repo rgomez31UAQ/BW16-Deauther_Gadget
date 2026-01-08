@@ -17,6 +17,17 @@ void nx::menu::init() {
   tx.init();
   debug_print(display.begin() ? "display initialized" : "display init failed");
   adv.init();
+  startAnimation();
+}
+
+void nx::menu::startAnimation(){
+  for (int i = 0; i < startAnimeallArray_LEN; i++){
+    display.clearBuffer();
+    display.drawXBMP(0,0,128,64,startAnimeallArray[i]);
+    display.sendBuffer();
+    delay(25);
+  }
+  delay(600);
 }
 
 int nx::menu::calcStartIndex(int sel) {
@@ -359,6 +370,54 @@ void nx::menu::renderScanEffect(int progress) {
   else currentImage = image_wifi_full_bits;
   
   display.drawXBMP((SCREEN_WIDTH - 19) / 2, ((SCREEN_HEIGHT - 16) / 2) + 2, 19, 16, currentImage);
+}
+void nx::menu::renderTyping(const char* const* texts, const int* yPositions, int textCount, unsigned long displayDuration, std::function<void()> drawBackground){
+  while(true){
+    if(btn.btnPress(btnBack)) break;
+    
+    for(int t = 0; t < textCount; t++){
+      int len = strlen(texts[t]);
+      for(int i = 0; i <= len; i++){
+        if(btn.btnPress(btnBack)) return;
+        display.clearBuffer();
+        if(drawBackground) drawBackground();
+        for(int prev = 0; prev < t; prev++){
+          int w = display.getStrWidth(texts[prev]);
+          display.drawStr((SCREEN_WIDTH - w) / 2, yPositions[prev], texts[prev]);
+        }
+        std::string temp = std::string(texts[t], i);
+        int w = display.getStrWidth(temp.c_str());
+        display.drawStr((SCREEN_WIDTH - w) / 2, yPositions[t], temp.c_str());
+        display.sendBuffer();
+        delay(50);
+      }
+      delay(200);
+    }
+    unsigned long startTime = millis();
+    while(millis() - startTime < displayDuration){
+      if(btn.btnPress(btnBack)) return;
+      delay(50);
+    }
+    for(int t = textCount - 1; t >= 0; t--){
+      int len = strlen(texts[t]);
+      for(int i = len; i >= 0; i--){
+        if(btn.btnPress(btnBack)) return;
+        display.clearBuffer();
+        if(drawBackground) drawBackground();
+        for(int remaining = 0; remaining < t; remaining++){
+          int w = display.getStrWidth(texts[remaining]);
+          display.drawStr((SCREEN_WIDTH - w) / 2, yPositions[remaining], texts[remaining]);
+        }
+        std::string temp = std::string(texts[t], i);
+        int w = display.getStrWidth(temp.c_str());
+        display.drawStr((SCREEN_WIDTH - w) / 2, yPositions[t], temp.c_str());
+        display.sendBuffer();
+        delay(30);
+      }
+      delay(100);
+    }
+    delay(500);
+  }
 }
 
 void nx::menu::renderPopup(const std::string& ctx){
@@ -817,13 +876,12 @@ void nx::menu::scanWiFi(){
 }
 
 void nx::menu::drawAbout(){
-  display.clearBuffer();
-  display.sendBuffer();
-  while(true){
-    if(btn.btnPress(btnBack)) break;
-  }
+  auto drawBg = [this](){
+    renderSingleLine("Nova-X", 5, true);
+    drawBorder();
+  };
+  renderTyping(info, yOffsetTyping, 3, displayDuration, drawBg);
 }
-
 void nx::menu::menuHandler(std::vector<menuItem> &menu, int index) {
   std::vector<std::string> menuNames;
   for (const auto &m : menu) menuNames.push_back(m.name);

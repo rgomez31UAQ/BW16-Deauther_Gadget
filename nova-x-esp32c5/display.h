@@ -22,6 +22,9 @@ namespace nx {
     static constexpr uint8_t channels5G[] = {36, 40, 44, 48, 149, 153, 157, 161, 165};
         
     static constexpr const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+    static constexpr const char* info[] = {"v0.2.2-beta", "ESP32-C5", "warwick320"};
+    static constexpr int yOffsetTyping[] = {30, 40, 50}; 
+
     std::vector<std::string> prevMenuName;
     int prevSelected = -1;
     int menuSize = 0;
@@ -29,6 +32,8 @@ namespace nx {
     int fontAscent = 0;
     int fontDescent = 0;
     int fontHeight = 0;
+
+    unsigned long displayDuration = 2000;
 
     static constexpr int charWidth = 6;
     static constexpr int lineHeight = 15;
@@ -74,6 +79,7 @@ namespace nx {
     void renderSingleLine(const std::string &text, int y, bool drawRect);
     void renderText(const std::vector<std::string> &items, int start, int y, int count);
     void renderPopup(const std::string& ctx);
+    void renderTyping(const char* const* texts, const int* yPositions, int textCount, unsigned long displayDuration, std::function<void()> drawBackground);
     void drawInitialAnimation(const std::vector<std::string> &items, int idx);
     void drawSelectionAnimation(const std::vector<std::string> &items, int newIdx);
     void drawStaticFrame(const std::vector<std::string> &items, int idx);
@@ -94,10 +100,12 @@ namespace nx {
     std::string modifySSIDWithSpaces(const std::string& ssid, int cloneCount);
     void sendBeaconForAP(const BSSIDInfo* ap, int& cloneCount);
     void executeSelectedAttack(const char* attackType, std::function<void(const BSSIDInfo&, uint8_t)> attackFunc);
-    
+
   public:
     int index = 0;
     std::vector<bool> selectedAPs;
+    // Start Animation
+    void startAnimation();
     // Core
     void init();
     void scanWiFi();

@@ -43,6 +43,7 @@ void setup(){
   Serial.println("[SERIAL] Started");
   Serial.println(F("=============================================================="));
   m.init();
+  
 }
 
 void loop(){

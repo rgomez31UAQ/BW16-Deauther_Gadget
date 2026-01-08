@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QPoint
 
-
 def resourcePath(relative_path):
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative_path)
@@ -27,28 +26,36 @@ class UploadThread(QThread):
 
     def run(self):
         fw_dir = resourcePath("firmware")
+
+        esptool = os.path.join(fw_dir, "esptool.exe")
         merged_bin = os.path.join(
             fw_dir,
             "nova-x-esp32c5.ino.merged.bin"
         )
 
+        if not os.path.exists(esptool):
+            self.log.emit("[!] esptool.exe not found\n")
+            self.finished.emit(-1)
+            return
+
         if not os.path.exists(merged_bin):
-            self.log.emit("[!] merged.bin not found\n")
+            self.log.emit("[!] merged firmware not found\n")
             self.finished.emit(-1)
             return
 
         cmd = [
-            sys.executable, "-m", "esptool",
+            esptool,
             "--chip", "esp32c5",
             "--port", self.comPort,
             "--baud", "1500000",
-            "--before", "default_reset",
-            "--after", "hard_reset",
-            "write_flash",
-            "--flash_mode", "dio",
-            "--flash_freq", "80m",
-            "--flash_size", "4MB",
-            "0x0", merged_bin
+            "--before", "default-reset",
+            "--after", "hard-reset",
+            "write-flash",
+            "--flash-mode", "dio",
+            "--flash-freq", "80m",
+            "--flash-size", "4MB",
+            "0x0",
+            merged_bin
         ]
 
         try:
@@ -82,14 +89,14 @@ class MainWindow(QWidget):
     def initUI(self):
         mainLayout = QVBoxLayout()
         mainLayout.setContentsMargins(0, 0, 0, 0)
-
         self.titleBar = QWidget()
         self.titleBar.setFixedHeight(36)
 
         titleLayout = QHBoxLayout()
         titleLayout.setContentsMargins(10, 0, 10, 0)
 
-        self.titleLabel = QLabel("ESP32-C5 Image Uploader")
+        self.titleLabel = QLabel("ESP32-C5 Image Uploader By warwick320")
+
         closeBtn = QPushButton("✕")
         closeBtn.setFixedSize(30, 24)
         closeBtn.clicked.connect(self.close)
@@ -97,7 +104,9 @@ class MainWindow(QWidget):
         titleLayout.addWidget(self.titleLabel)
         titleLayout.addStretch()
         titleLayout.addWidget(closeBtn)
+
         self.titleBar.setLayout(titleLayout)
+
         content = QWidget()
         contentLayout = QVBoxLayout()
 
@@ -155,7 +164,6 @@ class MainWindow(QWidget):
             delta = event.globalPos() - self.oldPos
             self.move(self.x() + delta.x(), self.y() + delta.y())
             self.oldPos = event.globalPos()
-
     def log(self, msg):
         self.logBox.moveCursor(self.logBox.textCursor().End)
         self.logBox.insertPlainText(msg)
@@ -173,6 +181,7 @@ class MainWindow(QWidget):
             return
 
         self.uploadBtn.setEnabled(False)
+
         self.thread = UploadThread(comPort)
         self.thread.log.connect(self.log)
         self.thread.finished.connect(self.uploadFinished)

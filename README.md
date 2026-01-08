@@ -2,7 +2,7 @@
   <br>
   <a href="https://github.com/warwick320/Nova-X-5G-Deauther"><img src="https://github.com/warwick320/Nova-X-5G-Deauther/blob/main/img/logo.png" alt="Nova-X" width="200"></a>
   <br>
-  Nova-X • ᚾᚬᚢᛅ ᛋ
+  Nova-X
   <br>
 </h1>
 
@@ -10,7 +10,7 @@
 ![ESP32](https://img.shields.io/badge/ESP32-2C2D72?logo=espressif&logoColor=white)
 ![Arduino](https://img.shields.io/badge/Arduino-00979D?logo=arduino&logoColor=white)
 ![License:  BSD 2-Clause](https://img.shields.io/badge/License-BSD%202--Clause-orange)
-![Version](https://img.shields.io/badge/version-0.1.1--beta-blue)
+![Version](https://img.shields.io/badge/version-0.1.2--beta-blue)
 ![GitHub stars](https://img.shields.io/github/stars/warwick320/Nova-X-5G-Deauther?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/warwick320/Nova-X-5G-Deauther?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/warwick320/Nova-X-5G-Deauther)
@@ -184,14 +184,14 @@ https://espressif.github.io/arduino-esp32/package_esp32_index.json
 
 ### Method 1 (Upload via Image Uploader)
 
-1. Download the latest image uploader from the Release page
+1. Download the latest image uploader from [the Release page](https://github.com/warwick320/Nova-X-5G-Deauther/releases/tag/image_uploader)
 2. Open image uploader
 3. Select the COM port to which the ESP32-C5 is connected
 4. Click Upload
 
 ### Method 2 (Upload via Sketch)
 
-> Before upload sketch you need to patch your esp32 compiler - [patcher](https://github.com/7h30th3r0n3/Evil-M5Project/tree/main/utilities/deauth_prerequisites) - ex) [my platform.txt](https://github.com/warwick320/Nova-X-5G-Deauther/blob/main/platform.txt)
+> Before upload sketch you need to patch your esp32 compiler - [patcher](https://github.com/7h30th3r0n3/Evil-M5Project/tree/main/utilities/deauth_prerequisites) - ex) [platform.txt](https://github.com/7h30th3r0n3/Evil-M5Project/blob/main/utilities/deauth_prerequisites/plateform.txt)
 
 1. Open `nova-x-esp32c5/nova-x-esp32c5.ino`
 2. Configure board settings:
