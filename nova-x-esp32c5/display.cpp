@@ -18,15 +18,43 @@ void nx::menu::init() {
   debug_print(display.begin() ? "display initialized" : "display init failed");
   adv.init();
   startAnimation();
+  setBrightness(12);
+}
+// IMPORT brightness range 0 ~ 15
+void nx::menu::setBrightness(uint8_t brightness){
+  if (brightness > 15) brightness = 15;
+	brightness = brightness | (brightness << 4);
+	uint8_t VMOCH = brightness >> 5;
+	VMOCH <<= 4;
+	uint8_t preCharge = brightness >> 4;
+	preCharge |= preCharge << 4;
+
+	Wire.beginTransmission(0x3C);
+	Wire.write(0);
+	Wire.write(0xd9); Wire.write(preCharge);
+	Wire.write(0xdb); Wire.write(VMOCH);
+	Wire.write(0x81); Wire.write(brightness);
+	Wire.endTransmission();
+}
+// for Fade in impact
+uint8_t gamma16(uint8_t x){
+  return (x * x + 7) / 15;
 }
 
 void nx::menu::startAnimation(){
-  for (int i = 0; i < startAnimeallArray_LEN; i++){
+  uint8_t level = 0;
+  for (uint8_t i = 0; i < startAnimeallArray_LEN; i++){
     display.clearBuffer();
     display.drawXBMP(0,0,128,64,startAnimeallArray[i]);
     display.sendBuffer();
+    if(i % framesPerStep == 0 && level < maxBrLevel){
+      level++;
+      uint8_t gLevel = gamma16(level);
+      setBrightness(gLevel);
+    }
     delay(25);
   }
+  setBrightness(maxBrLevel);
   delay(600);
 }
 
@@ -373,6 +401,8 @@ void nx::menu::renderScanEffect(int progress) {
   
   display.drawXBMP((SCREEN_WIDTH - 19) / 2, ((SCREEN_HEIGHT - 16) / 2) + 2, 19, 16, currentImage);
 }
+
+
 void nx::menu::renderTyping(const char* const* texts, const int* yPositions, int textCount, unsigned long displayDuration, std::function<void()> drawBackground){
   while(true){
     if(btn.btnPress(btnBack)) break;

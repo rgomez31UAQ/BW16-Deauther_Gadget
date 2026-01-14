@@ -31,7 +31,7 @@ namespace nx {
     static constexpr uint8_t channels5G[] = {36, 40, 44, 48, 149, 153, 157, 161, 165};
         
     static constexpr const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
-    static constexpr const char* info[] = {"v1.1.0-beta", "ESP32-C5", "warwick320"};
+    static constexpr const char* info[] = {"v1.2.0-beta", "ESP32-C5", "warwick320"};
     static constexpr int yOffsetTyping[] = {30, 40, 50}; 
 
     std::vector<std::string> prevMenuName;
@@ -44,6 +44,9 @@ namespace nx {
 
     unsigned long displayDuration = 2000;
 
+    static constexpr uint8_t maxBrLevel = 15;
+    static constexpr uint8_t framesPerStep = startAnimeallArray_LEN / 16 + 1;
+
     static constexpr int charWidth = 6;
     static constexpr int lineHeight = 15;
     static constexpr int baseX = 5;
@@ -53,6 +56,7 @@ namespace nx {
     static constexpr int textOffsetY = 3;
     static constexpr int padding = 10;
     static constexpr int scrollbarW = 3;
+
     static constexpr unsigned long animDuration = 300UL;
     static constexpr unsigned long lineAnimDuration = 250UL;
     static constexpr unsigned long lineDelay = 80UL;
@@ -75,13 +79,16 @@ namespace nx {
     nx::bt adv;
 
     void debug_print(const std::string &ctx);
+
+    void setBrightness(uint8_t brightness);
+
     int calcStartIndex(int sel);
     int calcRectWidth(int textWidth);
     int calcRectX(int rectWidth);
     int calcTextX(int rectX, int rectWidth, int textWidth);
     int calcTextY(int y);
     int calcCheckboxRectWidth(const std::string &channel);
-    void drawBorder();
+    
     void renderRoundRect(int x, int y, int w, int h);
     void renderCheckbox(int x, int y, bool checked);
     void renderLineWithCheckbox(const std::string &ssid, const std::string &channel, int y, bool checked, bool selected);
@@ -89,14 +96,17 @@ namespace nx {
     void renderText(const std::vector<std::string> &items, int start, int y, int count);
     void renderPopup(const std::string& ctx);
     void renderTyping(const char* const* texts, const int* yPositions, int textCount, unsigned long displayDuration, std::function<void()> drawBackground);
+    void renderProgressEffect(int progress);
+    void renderScanEffect(int progress);
+
+    void drawBorder();
     void drawInitialAnimation(const std::vector<std::string> &items, int idx);
     void drawSelectionAnimation(const std::vector<std::string> &items, int newIdx);
     void drawStaticFrame(const std::vector<std::string> &items, int idx);
     void drawCheckboxInitialAnimation(const std::vector<std::string> &ssids, const std::vector<std::string> &channels, const std::vector<bool> &checked, int idx);
     void drawCheckboxSelectionAnimation(const std::vector<std::string> &ssids, const std::vector<std::string> &channels, const std::vector<bool> &checked, int newIdx);
     void drawCheckboxFrame(const std::vector<std::string> &ssids, const std::vector<std::string> &channels, const std::vector<bool> &checked, int idx);
-    void renderProgressEffect(int progress);
-    void renderScanEffect(int progress);
+
     void runBle(std::function<void()> func, const std::string& title);
 
     std::vector<std::string> getChannelList();
