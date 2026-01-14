@@ -18,7 +18,6 @@ void nx::menu::init() {
   debug_print(display.begin() ? "display initialized" : "display init failed");
   adv.init();
   startAnimation();
-  setBrightness(12);
 }
 // IMPORT brightness range 0 ~ 15
 void nx::menu::setBrightness(uint8_t brightness){
@@ -56,6 +55,19 @@ void nx::menu::startAnimation(){
   }
   setBrightness(maxBrLevel);
   delay(600);
+  level = maxBrLevel;
+  for (int i = startAnimeallArray_LEN - 1; i >= 0; i--){
+    display.clearBuffer();
+    display.drawXBMP(0,0,128,64,startAnimeallArray[i]);
+    display.sendBuffer();
+    if(i % framesPerStep == 0 && level > 0){
+      level--;
+      uint8_t gLevel = gamma16(level);
+      setBrightness(gLevel);
+    }
+    delay(15);
+  }
+  setBrightness(0);
 }
 
 int nx::menu::calcStartIndex(int sel) {
@@ -174,21 +186,68 @@ void nx::menu::drawInitialAnimation(const std::vector<std::string> &items, int i
   unsigned long startT = millis();
   unsigned long endT = startT + lineAnimDuration + maxVisible * lineDelay;
 
+  unsigned long fadeDuration = lineAnimDuration + maxVisible * lineDelay;
+  uint8_t currentBr = 0;
+
+  static const BorderLine topLeft[] = {
+    {0, 2, 0, 22, 1}, {2, 0, 22, 0, 2}, {1, 1, 1, 20, 3},
+    {2, 1, 21, 1, 4}, {2, 19, 2, 2, 5}, {3, 2, 20, 2, 6}
+  };
+  
+  static const BorderLine topRight[] = {
+    {127, 2, 127, 22, 1}, {106, 0, 125, 0, 2}, {126, 2, 126, 21, 3},
+    {107, 1, 126, 1, 4}, {125, 19, 125, 2, 5}, {108, 2, 125, 2, 6}
+  };
+  
+  static const BorderLine bottomLeft[] = {
+    {0, 42, 0, 61, 1}, {2, 63, 22, 63, 2}, {1, 43, 1, 62, 3},
+    {2, 62, 21, 62, 4}, {2, 61, 2, 44, 5}, {3, 61, 20, 61, 6}
+  };
+  
+  static const BorderLine bottomRight[] = {
+    {127, 42, 127, 61, 1}, {106, 63, 125, 63, 2}, {126, 43, 126, 61, 3},
+    {107, 62, 126, 62, 4}, {125, 61, 125, 44, 5}, {108, 61, 125, 61, 6}
+  };
+  
+  static const BorderLine center[] = {
+    {1, 28, 1, 36, 1}, {2, 29, 2, 35, 2}, {126, 28, 126, 36, 3}, {125, 29, 125, 35, 4}
+  };
+
   while (millis() < endT) {
     unsigned long now = millis();
+    float fadeProgress = std::min(1.0f, float(now - startT) / fadeDuration);
+    uint8_t targetBr = uint8_t(maxBrLevel * fadeProgress);
+
+    if(targetBr != currentBr){
+      currentBr = targetBr;
+      setBrightness(gamma16(currentBr));
+    }
+    
     display.clearBuffer();
-    drawBorder();
+    
+    float eased = (fadeProgress < 0.5f) ? 4 * fadeProgress * fadeProgress * fadeProgress : 1 - powf(-2 * fadeProgress + 2, 3) / 2;
+    int cornerProgress = int(eased * 7);
+    int centerProgress = int(eased * 4);
+    
+    for(int i = 0; i < 6; i++) {
+      if(cornerProgress >= topLeft[i]. step) display.drawLine(topLeft[i].x1, topLeft[i].y1, topLeft[i].x2, topLeft[i].y2);
+      if(cornerProgress >= topRight[i].step) display.drawLine(topRight[i].x1, topRight[i].y1, topRight[i].x2, topRight[i].y2);
+      if(cornerProgress >= bottomLeft[i].step) display.drawLine(bottomLeft[i].x1, bottomLeft[i].y1, bottomLeft[i].x2, bottomLeft[i].y2);
+      if(cornerProgress >= bottomRight[i].step) display.drawLine(bottomRight[i].x1, bottomRight[i].y1, bottomRight[i].x2, bottomRight[i].y2);
+    }
+    
+    for(int i = 0; i < 4; i++) if(centerProgress >= center[i].step) display.drawLine(center[i].x1, center[i].y1, center[i].x2, center[i].y2);
 
     for (int i = 0; i < maxVisible && startIdx + i < menuSize; i++) {
       unsigned long itemStartT = startT + i * lineDelay;
       if (now < itemStartT) continue;
 
       float t = std::min(1.0f, float(now - itemStartT) / lineAnimDuration);
-      float eased = 1.0f - powf(1.0f - t, 3.0f);
+      float itemEased = 1.0f - powf(1.0f - t, 3.0f);
 
       int startY = SCREEN_HEIGHT + textOffsetY + i * lineHeight;
       int finalY = textOffsetY + i * lineHeight;
-      int currentY = startY + int((finalY - startY) * eased);
+      int currentY = startY + int((finalY - startY) * itemEased);
 
       if (currentY > -lineHeight && currentY < SCREEN_HEIGHT) renderSingleLine(items[startIdx + i], currentY, (startIdx + i) == idx);
     }
@@ -262,8 +321,18 @@ void nx::menu::drawCheckboxInitialAnimation(const std::vector<std::string> &ssid
   unsigned long startT = millis();
   unsigned long endT = startT + lineAnimDuration + maxVisible * lineDelay;
 
+  unsigned long fadeDuration = lineAnimDuration + maxVisible * lineDelay;
+  uint8_t currentBr = 0;
+
   while (millis() < endT) {
     unsigned long now = millis();
+    float fadeProgress = std::min(1.0f,float(now - startT) / fadeDuration);
+    uint8_t targetBr = uint8_t(maxBrLevel * fadeProgress);
+
+    if(targetBr != currentBr){
+      currentBr = targetBr;
+      setBrightness(gamma16(currentBr));
+    }
     display.clearBuffer();
 
     for (int i = 0; i < maxVisible && startIdx + i < menuSize; i++) {
@@ -404,6 +473,7 @@ void nx::menu::renderScanEffect(int progress) {
 
 
 void nx::menu::renderTyping(const char* const* texts, const int* yPositions, int textCount, unsigned long displayDuration, std::function<void()> drawBackground){
+  renderTypingF = true;
   while(true){
     if(btn.btnPress(btnBack)) break;
     
@@ -421,6 +491,10 @@ void nx::menu::renderTyping(const char* const* texts, const int* yPositions, int
         int w = display.getStrWidth(temp.c_str());
         display.drawStr((SCREEN_WIDTH - w) / 2, yPositions[t], temp.c_str());
         display.sendBuffer();
+        if(renderTypingF){
+          renderTypingF = false;
+          fadeIn();
+        }
         delay(50);
       }
       delay(200);
@@ -475,6 +549,11 @@ void nx::menu::renderPopup(const std::string& ctx){
 }
 
 void nx::menu::drawSubMenu(const std::string& title, bool progressFlag, bool scanFlag){
+  if(title != lastTitle){
+    lastTitle = title;
+    fadeFlag = true;
+  }
+
   progress += 5;
   if(progress > 100) progress = 1;
   display.clearBuffer();
@@ -483,6 +562,11 @@ void nx::menu::drawSubMenu(const std::string& title, bool progressFlag, bool sca
   drawBorder();
   if(progressFlag) renderProgressEffect(progress);
   display.sendBuffer();
+  
+  if(fadeFlag){
+    fadeIn();
+    fadeFlag = false;
+  }
 }
 
 uint8_t nx::menu::getRandomChannel() {
@@ -506,10 +590,12 @@ std::vector<std::array<uint8_t,6>> nx::menu::generateRandomBSSIDList(){
   return bssidList;
 }
 void nx::menu::executeAttackAll(const std::string& title,std::function<void()> attackFunc){
-  if(channelAPMap.empty()){
+  if(channelAPMap.empty()) {
     renderPopup("Scan First");
+    popupFlag = true;
     return;
   }
+  popupFlag = false;
 
   while(true){
     drawSubMenu(title);
@@ -521,9 +607,10 @@ void nx::menu::executeAttackAll(const std::string& title,std::function<void()> a
 void nx::menu::executeChannelAttack(const char* attackType, std::function<void(uint8_t)> attackFunc) {
   if(channelAPMap.empty()) {
     renderPopup("Scan First");
+    popupFlag = true;
     return;
   }
-  
+  popupFlag = false;
   std::vector<std::string> channelList = getChannelList();
   std::vector<uint8_t> channelNumbers;
   channelNumbers.reserve(channelAPMap.size());
@@ -563,8 +650,10 @@ void nx::menu::executeChannelAttack(const char* attackType, std::function<void(u
 void nx::menu::executeSelectedAttack(const char* attackType, std::function<void(const BSSIDInfo&, uint8_t)> attackFunc) {
   if(channelAPMap.empty()) {
     renderPopup("Scan First");
+    popupFlag = true;
     return;
   }
+  popupFlag = false;
   if(selectedAPs.empty()) {
     renderPopup("No APs Selected");
     return;
@@ -653,8 +742,10 @@ void nx::menu::deauthByChannel() {
 void nx::menu::drawSelectMenu() {
   if(channelAPMap.empty()) {
     renderPopup("Scan First");
+    popupFlag = true;
     return;
   }
+  popupFlag = false;
   
   std::vector<std::string> ssidList;
   std::vector<std::string> channelList;
@@ -728,11 +819,14 @@ void nx::menu::assocSelected() {
     tx.txAssocFrame(apInfo.bssid.data(), ssid, channel);
   });
 }
+
 void nx::menu::beaconAllSSID() {
   if(channelAPMap.empty()) {
     renderPopup("Scan First");
+    popupFlag = true;
     return;
   }
+  popupFlag = false;
   std::vector<const BSSIDInfo*> allAPs;
   for(auto& entry :channelAPMap) {
     for(auto& apInfo : entry.second) {
@@ -751,8 +845,10 @@ void nx::menu::beaconAllSSID() {
 void nx::menu::beaconSSIDDupe() {
   if(channelAPMap.empty()) {
     renderPopup("Scan First");
+    popupFlag = true;
     return;
   }
+  popupFlag = false;
   if(selectedAPs.empty() || std::count(selectedAPs. begin(), selectedAPs.end(), true) == 0) {
     renderPopup("No APs Selected");
     return;
@@ -778,8 +874,10 @@ void nx::menu::beaconSSIDDupe() {
 void nx::menu::beaconDupeByChannel() {
   if(channelAPMap.empty()) {
     renderPopup("Scan First");
+    popupFlag = true;
     return;
   }
+  popupFlag = false;
   
   std::vector<std::string> channelList = getChannelList();
   std::vector<uint8_t> channelNumbers;
@@ -819,6 +917,7 @@ void nx::menu::beaconDupeByChannel() {
     if(btn.btnPress(btnBack)) break;
   }
 }
+
 void nx::menu::beaconCustomPrefix(const std::string& prefix){
   std::vector<std::string> ssidList;
   std::vector<std::array<uint8_t,6>> bssidList;
@@ -856,6 +955,7 @@ void nx::menu::beaconCustomPrefix(const std::string& prefix){
   }
 
 }
+
 void nx::menu::executeBeaconAttack(const std::vector<const BSSIDInfo*>& apList, const std::string& title){
   if(apList.empty()){
     renderPopup("No APs to Attack");
@@ -893,6 +993,7 @@ void nx::menu::executeBeaconAttack(const std::vector<const BSSIDInfo*>& apList, 
     }
   }
 }
+
 std::vector<std::string> nx::menu::getRandomSSID(){
   std::vector<std::string> ssidList;
   ssidList.reserve(MAX_SSID);
@@ -955,6 +1056,7 @@ void nx::menu::drawAbout(){
 }
 
 void nx::menu::drawPacketMonitor(){
+  packetMonitorF = true;
   tx.setUseDFS(false);
   tx.startPacketMonitor();
   tx.setChannelHopping(true);
@@ -1017,6 +1119,10 @@ void nx::menu::drawPacketMonitor(){
         }
       }
       display.sendBuffer();
+      if(packetMonitorF){
+        fadeIn();
+        packetMonitorF = false;
+      }
     }
     if(btn.btnPress(btnUp)) {
       tx.setChannelHopping(false);
@@ -1031,6 +1137,26 @@ void nx::menu::drawPacketMonitor(){
     if(btn.btnPress(btnBack)) break;
   }
   tx.stopPacketMonitor();
+}
+
+void nx::menu::fadeIn(){
+  uint8_t level = 0;
+  for (uint8_t i = 0; i <= maxBrLevel; i++){
+    uint8_t gLevel = gamma16(i);
+    setBrightness(gLevel);
+    delay(15);
+  }
+  setBrightness(maxBrLevel - 2);
+}
+
+void nx::menu::fadeOut(){
+  uint8_t level = maxBrLevel;
+  for(uint8_t i = maxBrLevel; i > 0; i--){
+    uint8_t gLevel = gamma16(i);
+    setBrightness(gLevel);
+    delay(15);
+  }
+  setBrightness(0);
 }
 
 void nx::menu::menuHandler(std::vector<menuItem> &menu, int index) {
@@ -1052,12 +1178,20 @@ void nx::menu::menuHandler(std::vector<menuItem> &menu, int index) {
       indexChanged = true;
     }
     if (btn.btnPress(btnOk)) {
+      fadeFlag = true;
       if (!item.subMenu.empty()) {
         int subIndex = 0;
+        fadeOut();
         menuHandler(item.subMenu, subIndex);
+        fadeOut();
         drawMenu(menuNames, index);
       } else if (item.action) {
+        fadeOut();
         item.action();
+        if(!popupFlag) {
+          fadeOut();
+          prevSelected = -1;
+        }
         drawMenu(menuNames, index);
       }
     }

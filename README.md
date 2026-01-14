@@ -10,7 +10,7 @@
 ![ESP32](https://img.shields.io/badge/ESP32-2C2D72?logo=espressif&logoColor=white)
 ![Arduino](https://img.shields.io/badge/Arduino-00979D?logo=arduino&logoColor=white)
 ![License:  BSD 2-Clause](https://img.shields.io/badge/License-BSD%202--Clause-orange)
-![Version](https://img.shields.io/badge/version-1.1.0--beta-blue)
+![Version](https://img.shields.io/badge/version-1.2.0--beta-blue)
 ![GitHub stars](https://img.shields.io/github/stars/warwick320/Nova-X-5G-Deauther?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/warwick320/Nova-X-5G-Deauther?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/warwick320/Nova-X-5G-Deauther)

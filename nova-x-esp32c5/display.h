@@ -24,6 +24,10 @@ struct menuItem {
   menuItem(const std::string n, std::function<void()> act, std::vector<menuItem> sub = {}): name(n), action(act), subMenu(std::move(sub)) {}
 };
 
+struct BorderLine {
+  int x1, y1, x2, y2;
+  int step;
+};
 
 namespace nx {
   class menu {
@@ -33,6 +37,12 @@ namespace nx {
     static constexpr const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
     static constexpr const char* info[] = {"v1.2.0-beta", "ESP32-C5", "warwick320"};
     static constexpr int yOffsetTyping[] = {30, 40, 50}; 
+
+    std::string lastTitle = "";
+    bool fadeFlag = false;
+    bool popupFlag = false;
+    bool packetMonitorF = true;
+    bool renderTypingF = true;
 
     std::vector<std::string> prevMenuName;
     int prevSelected = -1;
@@ -60,6 +70,8 @@ namespace nx {
     static constexpr unsigned long animDuration = 300UL;
     static constexpr unsigned long lineAnimDuration = 250UL;
     static constexpr unsigned long lineDelay = 80UL;
+
+    static constexpr unsigned long borderAnimDuration = 250UL;
     
     static constexpr int checkboxX = baseX + 2;
     static constexpr int checkboxSize = 8;
@@ -81,6 +93,9 @@ namespace nx {
     void debug_print(const std::string &ctx);
 
     void setBrightness(uint8_t brightness);
+
+    void fadeIn();
+    void fadeOut();
 
     int calcStartIndex(int sel);
     int calcRectWidth(int textWidth);
