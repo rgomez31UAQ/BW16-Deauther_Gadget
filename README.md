@@ -47,6 +47,7 @@ WiFi security testing and BLE advertisement tool specifically designed for ESP32
 - All Access Points mode
 - Channel-specific targeting
 - Selected AP targeting
+- Selected STA targeting
 
 **Authentication Flooding**
 - Mass authentication frame transmission
