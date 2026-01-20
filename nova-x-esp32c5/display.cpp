@@ -869,7 +869,7 @@ void nx::menu::APSpoofing(){
   }
   
   while(true){
-    drawSubMenu("C.I");
+    drawSubMenu("AP Spoofing");
     unsigned long currentTime = millis();
     
     if(currentTime - lastDeauth >= 10000){ // 10 sec
@@ -1433,4 +1433,5 @@ void nx::menu::menuHandler(std::vector<menuItem> &menu, int index) {
     if (indexChanged) drawMenu(menuNames, index);
   }
 }
+
 
