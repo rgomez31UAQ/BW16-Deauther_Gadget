@@ -34,7 +34,7 @@ namespace nx {
     static constexpr uint8_t channels5G[] = {36, 40, 44, 48, 149, 153, 157, 161, 165};
         
     static constexpr const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
-    static constexpr const char* info[] = {"v1.4.0-beta", "ESP32-C5", "warwick320"};
+    static constexpr const char* info[] = {"v1.4.1-beta", "ESP32-C5", "warwick320"};
     static constexpr int yOffsetTyping[] = {30, 40, 50}; 
 
     static constexpr const int SCROLL_DELAY = 1500;
@@ -215,4 +215,5 @@ namespace nx {
   };
 
 }
+
 
